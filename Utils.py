@@ -283,6 +283,7 @@ def toOpen3dCloud(points,colors=None,normals=None):
   if colors is not None:
     if colors.max()>1:
       colors = colors/255.0
+    print(f"---------- colors shape: {colors.shape}, type: {colors.dtype}")
     cloud.colors = o3d.utility.Vector3dVector(colors.astype(np.float64))
   if normals is not None:
     cloud.normals = o3d.utility.Vector3dVector(normals.astype(np.float64))

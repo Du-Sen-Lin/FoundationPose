@@ -72,7 +72,7 @@ class YcbineoatReader:
 
     self.H = int(self.H*self.downscale)
     self.W = int(self.W*self.downscale)
-    self.K[:2] *= self.downscale
+    self.K[:2] *= self.downscale  # 根据 downscale 重新计算相机内参, 缩小 fx, fy, cx, cy
 
     self.gt_pose_files = sorted(glob.glob(f'{self.video_dir}/annotated_poses/*'))
 
@@ -104,10 +104,23 @@ class YcbineoatReader:
       return None
 
 
-  def get_color(self,i):
-    color = imageio.imread(self.color_files[i])[...,:3]
-    color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
+  # def get_color(self,i):
+  #   color = imageio.imread(self.color_files[i])[...,:3]
+  #   color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
+  #   return color
+
+  def get_color(self, i):
+    color = imageio.imread(self.color_files[i])
+    # 如果是灰度图（单通道），转换为 RGB（H, W, 3）
+    if color.ndim == 2:  
+        color = np.stack([color] * 3, axis=-1)  
+    # 如果是 RGBA（4 通道），去掉 Alpha 通道
+    elif color.shape[-1] == 4:  
+        color = color[..., :3]  
+    # 调整尺寸
+    color = cv2.resize(color, (self.W, self.H), interpolation=cv2.INTER_NEAREST)
     return color
+
 
   def get_mask(self,i):
     mask = cv2.imread(self.color_files[i].replace('rgb','masks'),-1)
@@ -121,6 +134,7 @@ class YcbineoatReader:
 
   def get_depth(self,i):
     depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
+    # print(f"##### self.W: {self.W}, self.H: {self.H}, name: {self.color_files[i].replace('rgb','depth')}")
     depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     depth[(depth<0.001) | (depth>=self.zfar)] = 0
     return depth
